@@ -14,11 +14,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      FTP_SERVER: ${{ secrets.FTP_SERVER }}
-      FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-      FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-      FTP_TARGET_DIR: ${{ secrets.FTP_TARGET_DIR != '' && secrets.FTP_TARGET_DIR || 'htdocs/' }}
 
     steps:
       - name: Checkout repository
@@ -36,25 +31,16 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Validate FTP secrets
-        shell: bash
-        run: |
-          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
-            echo "Missing one or more required GitHub secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD."
-            exit 1
-          fi
-          echo "Deploy target directory: $FTP_TARGET_DIR"
-
       - name: Deploy dist to InfinityFree via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
-          server: ${{ env.FTP_SERVER }}
-          username: ${{ env.FTP_USERNAME }}
-          password: ${{ env.FTP_PASSWORD }}
-          port: 21
+          server: ${{ secrets.ftp_server }}
+          username: ${{ secrets.ftp_username }}
+          password: ${{ secrets.ftp_password }}
+          port: 2124.18.0
           protocol: ftp
           local-dir: ./dist/
-          server-dir: ${{ env.FTP_TARGET_DIR }}
+          server-dir: ${{ secrets.ftp_target_dir }}
           exclude: |
             **/.git*
             **/.git*/**
