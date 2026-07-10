@@ -6,10 +6,6 @@ on:
 			- main
 			
 
-concurrency:
-	group: infinityfree-deploy-${{ github.ref }}
-	cancel-in-progress: true
-
 jobs:
 	deploy:
 		runs-on: ubuntu-latest
