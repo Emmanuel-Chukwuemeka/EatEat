@@ -1,43 +1,62 @@
 name: Deploy React App to InfinityFree
 
 on:
-	push:
-		branches:
-			- main
-			
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: infinityfree-deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-	deploy:
-		runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      FTP_SERVER: ${{ secrets.FTP_SERVER }}
+      FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+      FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+      FTP_TARGET_DIR: ${{ secrets.FTP_TARGET_DIR != '' && secrets.FTP_TARGET_DIR || 'htdocs/' }}
 
-		steps:
-			- name: Checkout repository
-				uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-			- name: Setup Node.js
-				uses: actions/setup-node@v4
-				with:
-					node-version: 24.18.0
-					cache: npm
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
 
-			- name: Install dependencies
-				run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-			- name: Build app
-				run: npm run build
+      - name: Build app
+        run: npm run build
 
-			- name: Deploy dist to InfinityFree via FTP
-				uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-				with:
-					server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
-					username: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
-					password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
-					port: 21
-					protocol: ftp
-					local-dir: ./dist/
-					server-dir: ${{ secrets.INFINITYFREE_TARGET_DIR }}
-					exclude: |
-						**/.git*
-						**/.git*/**
-						**/node_modules/**
-						.github/**
+      - name: Validate FTP secrets
+        shell: bash
+        run: |
+          if [ -z "$FTP_SERVER" ] || [ -z "$FTP_USERNAME" ] || [ -z "$FTP_PASSWORD" ]; then
+            echo "Missing one or more required GitHub secrets: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD."
+            exit 1
+          fi
+          echo "Deploy target directory: $FTP_TARGET_DIR"
+
+      - name: Deploy dist to InfinityFree via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        with:
+          server: ${{ env.FTP_SERVER }}
+          username: ${{ env.FTP_USERNAME }}
+          password: ${{ env.FTP_PASSWORD }}
+          port: 21
+          protocol: ftp
+          local-dir: ./dist/
+          server-dir: ${{ env.FTP_TARGET_DIR }}
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
